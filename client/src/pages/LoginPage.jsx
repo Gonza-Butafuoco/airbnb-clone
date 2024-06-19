@@ -1,7 +1,7 @@
 import { useContext, useState } from "react";
 import { Link, Navigate } from "react-router-dom";
 import axios from "axios"
-import { UserContext } from "../UserContext";
+import { UserContext } from "../userContext";
 
 
 export default function LoginPage() {
@@ -13,15 +13,25 @@ export default function LoginPage() {
   async function handleLoginSubmit(ev) {
     ev.preventDefault();
     try {
-     const {data} = await axios.post("/login", { email, password });
-     setUser(data)
+      const { data } = await axios.post("/login", { email, password });
+      setUser(data);
       alert("Login successful");
-
-      setRedirect(true)
+      setRedirect(true);
     } catch (error) {
-      alert("Login failed");
+      if (error.response) {
+        if (error.response.status === 401) {
+          alert("Login failed: Incorrect password");
+        } else if (error.response.status === 404) {
+          alert("Login failed: User not found");
+        } else {
+          alert("Login failed: An unexpected error occurred");
+        }
+      } else {
+        alert("Login failed: Unable to connect to the server");
+      }
     }
   }
+
 
   if (redirect){
     return <Navigate to={'/'}/>

@@ -3,6 +3,7 @@ const cors = require('cors');
 const mongoose = require('mongoose');
 const bcrypt = require('bcryptjs');
 const userModel = require('./models/users');
+const placeModel = require('./models/places')
 const cookieParser = require('cookie-parser')
 const imageDownloader = require('image-downloader')
 const multer = require('multer');
@@ -16,7 +17,7 @@ const jwtSecret = 'Lorem ipsum dolor sit amet consectetur adipisicing elit'
 
 app.use(express.json());
 app.use(cookieParser());
-app.use('/uploads' , express.static(__dirname + '/uploads'))
+app.use('/uploads', express.static(__dirname + '/uploads'))
 app.use(cors({
     credentials: true,
     origin: 'http://localhost:3000',
@@ -97,7 +98,7 @@ app.post('/upload-by-link', async (req, res) => {
     }
 
     const newName = 'photo' + Date.now() + '.jpg';
-    
+
     try {
         await imageDownloader.image({
             url: link,
@@ -110,19 +111,95 @@ app.post('/upload-by-link', async (req, res) => {
     }
 });
 
-const photosMiddleware= multer({dest:'uploads'})
+const upload = multer({ dest: 'uploads/' });
 
-app.post('/upload', photosMiddleware.array('photos' , 100),(req,res) => {
-    const uploadedFiles= [];
-    for (let i = 0; i < files.length; i++){
-        const {path ,originalname} = req.files[i];
+const photosMiddleware = upload.array('photos', 100);
+
+app.post('/upload', photosMiddleware, (req, res) => {
+    const uploadedFiles = [];
+    for (let i = 0; i < req.files.length; i++) {
+        const { path: tempPath, originalname } = req.files[i];
         const parts = originalname.split('.');
         const ext = parts[parts.length - 1];
-        const newPath = path + '.' + ext;
-        fs.renameSync(path , newPath);
-        uploadedFiles.push(newPath.replace('uploads/' , ''));
-       }
+        const newPath = `${tempPath}.${ext}`;
+        fs.renameSync(tempPath, newPath);
+        uploadedFiles.push(newPath.replace(/\\/g, '/').replace('uploads/', ''));
+    }
     res.json(uploadedFiles);
+});
+
+app.post('/accommodations', (req, res) => {
+    const { token } = req.cookies
+    const { title,
+        address,
+        addedPhotos,
+        description,
+        selectedPerks,
+        extraInfo,
+        checkin,
+        checkout,
+        maxGuests, } = req.body;
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+        if (err) throw err;
+        const placeDoc = await placeModel.create({
+            owner: userData.id,
+            title,
+            address,
+            photos: addedPhotos,
+            description,
+            perks: selectedPerks,
+            extraInfo,
+            checkin,
+            checkout,
+            maxGuests,
+        });
+        res.json(placeDoc)
+    });
+});
+
+app.put('/accommodations/:id', async (req, res) => {
+    const { token } = req.cookies
+    const { id,
+        title,
+        address,
+        addedPhotos,
+        description,
+        selectedPerks,
+        extraInfo,
+        checkin,
+        checkout,
+        maxGuests, } = req.body;
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+        const placeDoc = await placeModel.findById(id);
+        if (userData.id === placeDoc.owner.toString()) {
+            placeDoc.set({
+                title,
+                address,
+                photos: addedPhotos,
+                description,
+                perks: selectedPerks,
+                extraInfo,
+                checkin,
+                checkout,
+                maxGuests,
+            })
+            await placeDoc.save()
+        }
+
+    });
+});
+
+app.get('/accommodations', (req, res) => {
+    const { token } = req.cookies;
+    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+        const { id } = userData;
+        res.json(await placeModel.find({ owner: id }));
+    });
+});
+
+app.get('/accommodations/:id', async (req, res) => {
+    const { id } = req.params;
+    res.json(await placeModel.findById(id))
 });
 
 app.listen(4000, () => {

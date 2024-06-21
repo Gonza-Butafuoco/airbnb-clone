@@ -205,10 +205,33 @@ app.put('/accommodations', async (req, res) => {
 
 app.get('/accommodations', (req, res) => {
     const { token } = req.cookies;
+    if (!token) {
+        return res.status(401).json({ message: 'No token provided' });
+    }
+
     jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+        if (err) {
+            return res.status(403).json({ message: 'Invalid token' });
+        }
+
         const { id } = userData;
-        res.json(await placeModel.find({ owner: id }));
+        try {
+            const accommodations = await placeModel.find({ owner: id });
+            res.json(accommodations);
+        } catch (error) {
+            res.status(500).json({ message: 'Failed to fetch accommodations' });
+        }
     });
+});
+
+app.get('/all-accommodations', async (req, res) => {
+    try {
+        const accommodations = await placeModel.find({});
+        res.json(accommodations);
+    } catch (error) {
+        console.error('Error fetching all accommodations:', error);
+        res.status(500).json({ message: 'Internal server error' });
+    }
 });
 
 app.get('/accommodations/:id', async (req, res) => {

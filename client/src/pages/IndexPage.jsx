@@ -5,11 +5,18 @@ import { Link } from "react-router-dom";
 export default function IndexPage() {
   const [accommodations, setAccommodations] = useState([]);
 
+  
   useEffect(() => {
-    axios.get("/accommodations").then((response) => {
-      setAccommodations(response.data);
-    });
+    axios.get("http://localhost:4000/all-accommodations")
+      .then((response) => {
+        setAccommodations(response.data);
+      })
+      .catch((error) => {
+        console.error('Error fetching accommodations:', error);
+      });
   }, []);
+
+  
   return (
     <div className="mt-8 grid gap-x-6 gap-y-8 grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
       {accommodations.length > 0 &&

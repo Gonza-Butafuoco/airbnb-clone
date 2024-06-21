@@ -42,10 +42,10 @@ export default function AccommodationsPage() {
       <div className="mt-4">
         {accommodations.length > 0 &&
           accommodations.map((accommodations) => (
-            <Link to={'/account/accommodations/' +accommodations._id } className=" flex cursor-pointer gap-4 bg-gray-200 p-4 rounded-2xl ">
-              <div className=" flex w-32 h-32 bg-gray-300 grow shrink-0">
+            <Link to={'/account/accommodations/' +accommodations._id } className=" flex cursor-pointer mb-4 gap-4 bg-gray-200 p-4 rounded-2xl ">
+              <div className=" flex w-32 h-32 bg-gray-300 rounded-xl  shrink-0">
                 {accommodations.photos.length > 0 && (
-                  <img className=" object-cover w-full  " src={'http://localhost:4000/uploads/'+accommodations.photos[0]} alt="" />
+                  <img className=" object-cover min-w-full rounded-xl " src={'http://localhost:4000/uploads/'+accommodations.photos[0]} alt="" />
                 )}
               </div>
               <div className="grow-0 shrink">

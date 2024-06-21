@@ -138,7 +138,9 @@ app.post('/accommodations', (req, res) => {
         extraInfo,
         checkin,
         checkout,
-        maxGuests, } = req.body;
+        maxGuests, 
+        price,
+    } = req.body;
     jwt.verify(token, jwtSecret, {}, async (err, userData) => {
         if (err) throw err;
         const placeDoc = await placeModel.create({
@@ -152,26 +154,30 @@ app.post('/accommodations', (req, res) => {
             checkin,
             checkout,
             maxGuests,
+            price,
         });
         res.json(placeDoc)
     });
 });
 
-app.put('/accommodations/:id', async (req, res) => {
-    const { token } = req.cookies
-    const { id,
-        title,
-        address,
-        addedPhotos,
-        description,
-        selectedPerks,
-        extraInfo,
-        checkin,
-        checkout,
-        maxGuests, } = req.body;
-    jwt.verify(token, jwtSecret, {}, async (err, userData) => {
-        const placeDoc = await placeModel.findById(id);
-        if (userData.id === placeDoc.owner.toString()) {
+app.put('/accommodations', async (req, res) => {
+    try {
+        const { token } = req.cookies;
+        const { id, title, address, addedPhotos, description, selectedPerks, extraInfo, checkin, checkout, maxGuests , price } = req.body;
+        jwt.verify(token, jwtSecret, {}, async (err, userData) => {
+            if (err) {
+                return res.status(401).json({ error: 'Unauthorized' });
+            }
+
+
+            const placeDoc = await placeModel.findById(id);
+
+
+            if (userData.id !== placeDoc.owner.toString()) {
+                return res.status(403).json({ error: 'Forbidden' });
+            }
+
+
             placeDoc.set({
                 title,
                 address,
@@ -182,11 +188,19 @@ app.put('/accommodations/:id', async (req, res) => {
                 checkin,
                 checkout,
                 maxGuests,
-            })
-            await placeDoc.save()
-        }
+                price,
+            });
 
-    });
+
+            await placeDoc.save();
+
+
+            res.json(placeDoc);
+        });
+    } catch (error) {
+        console.error('Error en PUT /accommodations:', error);
+        res.status(500).json({ error: 'Internal Server Error' });
+    }
 });
 
 app.get('/accommodations', (req, res) => {

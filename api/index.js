@@ -8,7 +8,9 @@ const cookieParser = require('cookie-parser')
 const imageDownloader = require('image-downloader')
 const multer = require('multer');
 const fs = require('fs');
-const jwt = require('jsonwebtoken')
+const jwt = require('jsonwebtoken');
+const BookingModel = require('./models/booking');
+const { resolve } = require('path');
 require('dotenv').config();
 const app = express();
 
@@ -23,10 +25,21 @@ app.use(cors({
     origin: 'http://localhost:3000',
 }));
 
-// Conexión a MongoDB
+
 mongoose.connect(process.env.MONGO_URL)
     .then(() => console.log('MongoDB connected'))
     .catch(err => console.error('MongoDB connection error:', err));
+
+function getUserDataFromReq(req) {
+    return new Promise((resolve, reject) => {
+
+        jwt.verify(req.cookies.token, jwtSecret, {}, async (err, userData) => {
+            if (err) throw err;
+            resolve(userData)
+
+        });
+    });
+}
 
 app.get('/test', (req, res) => {
     res.json("test ok");
@@ -138,7 +151,7 @@ app.post('/accommodations', (req, res) => {
         extraInfo,
         checkin,
         checkout,
-        maxGuests, 
+        maxGuests,
         price,
     } = req.body;
     jwt.verify(token, jwtSecret, {}, async (err, userData) => {
@@ -163,7 +176,7 @@ app.post('/accommodations', (req, res) => {
 app.put('/accommodations', async (req, res) => {
     try {
         const { token } = req.cookies;
-        const { id, title, address, addedPhotos, description, selectedPerks, extraInfo, checkin, checkout, maxGuests , price } = req.body;
+        const { id, title, address, addedPhotos, description, selectedPerks, extraInfo, checkin, checkout, maxGuests, price } = req.body;
         jwt.verify(token, jwtSecret, {}, async (err, userData) => {
             if (err) {
                 return res.status(401).json({ error: 'Unauthorized' });
@@ -237,6 +250,32 @@ app.get('/all-accommodations', async (req, res) => {
 app.get('/accommodations/:id', async (req, res) => {
     const { id } = req.params;
     res.json(await placeModel.findById(id))
+});
+
+app.post('/bookings', async (req, res) => {
+    const userData = await getUserDataFromReq(req);
+    const {
+        accommodation, checkIn, checkOut,
+        numberOfGuests, name, mobile, price
+         } = req.body;
+
+    BookingModel.create({
+        accommodation, checkIn, checkOut,
+        numberOfGuests, name, mobile, price,
+        user: userData.id,
+    }).then((doc) => {
+        res.json(doc);
+    }).catch((err) => {
+        throw err;
+    });
+});
+
+
+
+
+app.get('/bookings', async (req, res) => {
+    const userData = await getUserDataFromReq(req);
+    res.json(await BookingModel.find({user: userData.id}).populate('accommodation'))
 });
 
 app.listen(4000, () => {

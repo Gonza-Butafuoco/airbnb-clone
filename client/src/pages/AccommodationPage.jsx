@@ -1,11 +1,43 @@
 import axios from "axios";
-import { useEffect, useState } from "react";
-import { useParams } from "react-router-dom";
+import { useContext, useEffect, useState } from "react";
+import { Navigate, useParams } from "react-router-dom";
+import {differenceInCalendarDays} from 'date-fns'
+import { UserContext } from "../userContext";
 
 export default function AccommodationPage() {
   const { id } = useParams();
   const [accommodation, setAccommodation] = useState(null);
   const [showAllPhotos, setShowAllPhotos] = useState(false);
+  const [checkIn, setCheckIn] = useState("");
+  const [checkOut, setCheckOut] = useState("");
+  const [numberOfGuests, setNumberOfGuests] = useState(1);
+  const [name , setName] = useState('');
+  const [mobile , setMobile] = useState('');
+  const [redirect , setRedirect] = useState('');
+  const {user} = useContext(UserContext);
+
+  
+  useEffect(() => {
+    if(user){
+      setName(user.name)
+    }
+  }, [user])
+
+
+  let numberOfNights = 0;
+  if (checkIn && checkOut) {
+    numberOfNights = differenceInCalendarDays(new Date(checkOut) , new Date(checkIn))
+  }
+  
+  async function bookThisAccommodation(){
+   const response = await axios.post('/bookings' ,  {
+    checkIn , checkOut , numberOfGuests , name , mobile ,
+  accommodation: accommodation._id,
+  price: numberOfNights * accommodation.price,
+  });
+  const bookingId = response.data._id;
+  setRedirect(`/account/bookings/${bookingId}`);
+  }
 
   useEffect(() => {
     if (!id) {
@@ -65,6 +97,10 @@ export default function AccommodationPage() {
         </div>
       </div>
     );
+  }
+
+  if(redirect){
+    return <Navigate to={redirect}/>
   }
 
   return (
@@ -183,20 +219,57 @@ export default function AccommodationPage() {
               <div className="flex">
                 <div className=" py-3 px-4  lg:text-2xl">
                   <label>Check-in:</label>
-                  <input className="bg-white" type="date" />
+                  <input
+                    className="bg-white"
+                    type="date"
+                    value={checkIn}
+                    onChange={(ev) => setCheckIn(ev.target.value)}
+                  />
                 </div>
                 <div className="  py-3 px-4 border-l  lg:text-2xl">
                   <label>Check-out:</label>
-                  <input className=" bg-white " type="date" />
+                  <input
+                    className=" bg-white "
+                    type="date"
+                    value={checkOut}
+                    onChange={(ev) => setCheckOut(ev.target.value)}
+                  />
                 </div>
               </div>
             </div>
             <div className="  border  py-4 px-4 rounded-2xl lg:text-2xl">
               <label>Number of Guests:</label>
-              <input className=" bg-white ml-3" type="number" value={1} />
+              <input
+                className=" bg-white ml-3"
+                type="number"
+                value={numberOfGuests}
+                onChange={(ev) => setNumberOfGuests(ev.target.value)}
+              />
             </div>
-            <button className="primary mt-4 lg:text-2xl">
-              Book this place
+            {numberOfNights > 0 && (
+              <div className="  border  py-4 px-4 rounded-2xl lg:text-2xl">
+              <label>Your Full Name:</label>
+              <input
+                className=" bg-white ml-3"
+                type="text"
+                value={name}
+                onChange={(ev) => setName(ev.target.value)}
+              />
+              <label>Phone Number</label>
+              <input
+                className=" bg-white ml-3"
+                type="tel"
+                value={mobile}
+                onChange={(ev) => setMobile(ev.target.value)}
+              />
+            </div>
+            
+            )}
+            <button onClick={bookThisAccommodation} className="primary mt-4 lg:text-2xl">
+              Book this place  
+              {numberOfNights > 0 && (
+               <span> ${numberOfNights * accommodation.price} USD</span> 
+              )}
             </button>
           </div>
         </div>
